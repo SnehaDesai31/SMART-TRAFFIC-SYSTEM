@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Smart Traffic Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI';
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: white;
+}
+
+.container { padding: 20px; }
+
+.header {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+}
+
+.card {
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    padding: 15px;
+    border-radius: 12px;
+}
+
+input, select {
+    width: 90%;
+    padding: 10px;
+    margin: 8px;
+    border-radius: 6px;
+    border: none;
+}
+
+button {
+    padding: 10px 20px;
+    background: #00c853;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.signal { font-size: 28px; }
+.green { color: lime; }
+.yellow { color: gold; }
+.red { color: red; }
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="header">🚦 Smart Traffic Control Dashboard</div>
+
+<div class="grid">
+
+<!-- INPUT -->
+<div class="card">
+
+<h3>🛣️ Road Configuration</h3>
+
+<select id="road_type" onchange="updateRoads()">
+<option value="one">➡️ One Way</option>
+<option value="two">↔️ Two Way</option>
+<option value="three">🔀 Three Way</option>
+<option value="four">➕ Four Way</option>
+</select>
+
+<div id="roads"></div>
+
+<h4>🚑 Emergency Vehicle</h4>
+<select id="vehicle">
+<option value="none">No Emergency</option>
+<option value="road1">🚑 Road 1</option>
+<option value="road2">🔥 Road 2</option>
+<option value="road3">🚓 Road 3</option>
+<option value="road4">🚑 Road 4</option>
+</select>
+
+<button onclick="run()">⚡ Run System</button>
+
+</div>
+
+<!-- SIGNAL -->
+<div class="card">
+<h3>🚦 Traffic Signal Status</h3>
+<div id="signals"></div>
+</div>
+
+<!-- ANALYTICS -->
+<div class="card">
+<h3>📊 Traffic Analytics</h3>
+<p>🚗 Level: <span id="level"></span></p>
+<p>⏱️ Wait: <span id="wait"></span></p>
+<canvas id="flowChart"></canvas>
+</div>
+
+</div>
+
+<div class="grid">
+
+<div class="card">
+<h3>🌫️ CO₂ Emission</h3>
+<canvas id="co2Chart"></canvas>
+</div>
+
+<div class="card">
+<h3>🧠 Fuzzy Logic</h3>
+<p id="fuzzy"></p>
+</div>
+
+<div class="card">
+<h3>🚨 Alerts</h3>
+<div id="alerts"></div>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+// dynamic input
+function updateRoads(){
+    let type = document.getElementById("road_type").value;
+    let count = 1;
+
+    if(type=="two") count=2;
+    else if(type=="three") count=3;
+    else if(type=="four") count=4;
+
+    let html="";
+    for(let i=1;i<=count;i++){
+        html += `<input id="r${i}" placeholder="🚗 Road ${i} Density">`;
+    }
+
+    document.getElementById("roads").innerHTML = html;
+}
+
+updateRoads();
+
+// main logic
+function run(){
+
+let r1 = document.getElementById("r1")?.value || 0;
+let r2 = document.getElementById("r2")?.value || 0;
+let r3 = document.getElementById("r3")?.value || 0;
+let r4 = document.getElementById("r4")?.value || 0;
+
+let vehicle = document.getElementById("vehicle").value;
+let road_type = document.getElementById("road_type").value;
+
+fetch('/calculate',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body: JSON.stringify({r1,r2,r3,r4,vehicle,road_type})
+})
+.then(res=>res.json())
+.then(data=>{
+
+// SIGNALS
+let html="";
+for(let i=1;i<=data.count;i++){
+    if(i==data.green)
+        html += `Road ${i}: <span class="signal green">🟢</span><br>`;
+    else if(i==data.green-1)
+        html += `Road ${i}: <span class="signal yellow">🟡</span><br>`;
+    else
+        html += `Road ${i}: <span class="signal red">🔴</span><br>`;
+}
+document.getElementById("signals").innerHTML=html;
+
+// ANALYTICS
+document.getElementById("level").innerText=data.level;
+document.getElementById("wait").innerText=data.wait+" sec";
+
+// FUZZY
+document.getElementById("fuzzy").innerText =
+data.emergency ? "🚑 Emergency override activated"
+: "🧠 Selected highest density road";
+
+// ALERTS
+let alertText="";
+if(data.emergency) alertText+="🚨 Emergency detected<br>";
+if(data.level=="Critical") alertText+="🔴 High congestion<br>";
+alertText+="🟢 System normal";
+
+document.getElementById("alerts").innerHTML=alertText;
+
+// labels
+let labels=[];
+for(let i=1;i<=data.count;i++) labels.push("R"+i);
+
+// charts
+new Chart(document.getElementById("flowChart"),{
+type:'line',
+data:{labels:labels,datasets:[{data:data.densities}]}
+});
+
+new Chart(document.getElementById("co2Chart"),{
+type:'bar',
+data:{labels:labels,datasets:[{data:data.densities}]}
+});
+
+});
+}
+</script>
+
+</body>
+</html>

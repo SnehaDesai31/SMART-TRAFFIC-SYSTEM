@@ -13,26 +13,48 @@ body {
     color: white;
 }
 
-.container { padding: 20px; }
-
+/* HEADER */
 .header {
+    padding: 15px;
+    font-size: 24px;
+    background: #111;
     text-align: center;
-    font-size: 28px;
-    margin-bottom: 20px;
 }
 
-.grid {
+/* LAYOUT */
+.main {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: 250px 1fr;
 }
 
+/* SIDEBAR */
+.sidebar {
+    background: #0b132b;
+    height: 100vh;
+    padding: 15px;
+}
+
+/* CONTENT */
+.content {
+    padding: 20px;
+}
+
+/* CARD */
 .card {
     background: linear-gradient(135deg, #1e3c72, #2a5298);
     padding: 15px;
     border-radius: 12px;
+    margin-bottom: 20px;
 }
 
+/* GRID */
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* INPUT */
 input, select {
     width: 90%;
     padding: 10px;
@@ -41,6 +63,7 @@ input, select {
     border: none;
 }
 
+/* BUTTON */
 button {
     padding: 10px 20px;
     background: #00c853;
@@ -49,37 +72,76 @@ button {
     cursor: pointer;
 }
 
-.signal { font-size: 28px; }
-.green { color: lime; }
-.yellow { color: gold; }
-.red { color: red; }
+/* ===== NEW SIGNAL DESIGN ===== */
+.signal-container {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 15px;
+}
+
+.signal-road {
+    text-align: center;
+}
+
+.traffic-light {
+    background: #111;
+    padding: 10px;
+    border-radius: 10px;
+    width: 50px;
+    margin: auto;
+}
+
+.light {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin: 6px auto;
+    background: #333;
+}
+
+.red.active { background: red; }
+.yellow.active { background: gold; }
+.green.active { background: lime; }
+
+.road-label {
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+/* ALERTS */
+.alert {
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 5px;
+}
+
+.critical { background: red; }
+.warning { background: orange; }
+.info { background: blue; }
 
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
 <div class="header">🚦 Smart Traffic Control Dashboard</div>
 
-<div class="grid">
+<div class="main">
 
-<!-- INPUT -->
-<div class="card">
+<!-- SIDEBAR -->
+<div class="sidebar">
 
-<h3>🛣️ Road Configuration</h3>
+<h3>⚙️ Controls</h3>
 
 <select id="road_type" onchange="updateRoads()">
-<option value="one">➡️ One Way</option>
-<option value="two">↔️ Two Way</option>
-<option value="three">🔀 Three Way</option>
-<option value="four">➕ Four Way</option>
+<option value="one">One Way</option>
+<option value="two">Two Way</option>
+<option value="three">Three Way</option>
+<option value="four">Four Way</option>
 </select>
 
 <div id="roads"></div>
 
-<h4>🚑 Emergency Vehicle</h4>
 <select id="vehicle">
 <option value="none">No Emergency</option>
 <option value="road1">🚑 Road 1</option>
@@ -88,14 +150,19 @@ button {
 <option value="road4">🚑 Road 4</option>
 </select>
 
-<button onclick="run()">⚡ Run System</button>
+<button onclick="run()">Run System</button>
 
 </div>
+
+<!-- CONTENT -->
+<div class="content">
+
+<div class="grid">
 
 <!-- SIGNAL -->
 <div class="card">
 <h3>🚦 Traffic Signal Status</h3>
-<div id="signals"></div>
+<div id="signals" class="signal-container"></div>
 </div>
 
 <!-- ANALYTICS -->
@@ -103,7 +170,6 @@ button {
 <h3>📊 Traffic Analytics</h3>
 <p>🚗 Level: <span id="level"></span></p>
 <p>⏱️ Wait: <span id="wait"></span></p>
-<canvas id="flowChart"></canvas>
 </div>
 
 </div>
@@ -111,17 +177,24 @@ button {
 <div class="grid">
 
 <div class="card">
+<h3>📈 Vehicle Flow</h3>
+<canvas id="flowChart"></canvas>
+</div>
+
+<div class="card">
 <h3>🌫️ CO₂ Emission</h3>
 <canvas id="co2Chart"></canvas>
 </div>
 
+</div>
+
 <div class="card">
-<h3>🧠 Fuzzy Logic</h3>
+<h3>🧠 Fuzzy Logic Analysis</h3>
 <p id="fuzzy"></p>
 </div>
 
 <div class="card">
-<h3>🚨 Alerts</h3>
+<h3>🚨 Alerts & Notifications</h3>
 <div id="alerts"></div>
 </div>
 
@@ -131,7 +204,7 @@ button {
 
 <script>
 
-// dynamic input
+// dynamic inputs
 function updateRoads(){
     let type = document.getElementById("road_type").value;
     let count = 1;
@@ -150,7 +223,7 @@ function updateRoads(){
 
 updateRoads();
 
-// main logic
+// main function
 function run(){
 
 let r1 = document.getElementById("r1")?.value || 0;
@@ -169,17 +242,37 @@ body: JSON.stringify({r1,r2,r3,r4,vehicle,road_type})
 .then(res=>res.json())
 .then(data=>{
 
-// SIGNALS
-let html="";
-for(let i=1;i<=data.count;i++){
-    if(i==data.green)
-        html += `Road ${i}: <span class="signal green">🟢</span><br>`;
-    else if(i==data.green-1)
-        html += `Road ${i}: <span class="signal yellow">🟡</span><br>`;
-    else
-        html += `Road ${i}: <span class="signal red">🔴</span><br>`;
+// ===== NEW SIGNAL UI =====
+let html = "";
+
+for(let i=1; i<=data.count; i++){
+
+    let red = "", yellow = "", green = "";
+
+    if(i == data.green){
+        green = "active";
+    } 
+    else if(i == data.green - 1){
+        yellow = "active";
+    } 
+    else {
+        red = "active";
+    }
+
+    html += `
+    <div class="signal-road">
+        <div class="road-label">🚗 Road ${i}</div>
+        <div class="traffic-light">
+            <div class="light red ${red}"></div>
+            <div class="light yellow ${yellow}"></div>
+            <div class="light green ${green}"></div>
+        </div>
+    </div>
+    `;
 }
-document.getElementById("signals").innerHTML=html;
+
+document.getElementById("signals").innerHTML = html;
+
 
 // ANALYTICS
 document.getElementById("level").innerText=data.level;
@@ -188,21 +281,27 @@ document.getElementById("wait").innerText=data.wait+" sec";
 // FUZZY
 document.getElementById("fuzzy").innerText =
 data.emergency ? "🚑 Emergency override activated"
-: "🧠 Selected highest density road";
+: "🧠 Signal selected based on highest density";
 
 // ALERTS
-let alertText="";
-if(data.emergency) alertText+="🚨 Emergency detected<br>";
-if(data.level=="Critical") alertText+="🔴 High congestion<br>";
-alertText+="🟢 System normal";
+let alertHTML="";
+if(data.emergency)
+alertHTML+=`<div class="alert critical">Emergency Vehicle Detected</div>`;
 
-document.getElementById("alerts").innerHTML=alertText;
+if(data.level=="Critical")
+alertHTML+=`<div class="alert critical">High Congestion</div>`;
+else if(data.level=="High")
+alertHTML+=`<div class="alert warning">Moderate Congestion</div>`;
 
-// labels
+alertHTML+=`<div class="alert info">System Running</div>`;
+
+document.getElementById("alerts").innerHTML=alertHTML;
+
+
+// CHARTS
 let labels=[];
 for(let i=1;i<=data.count;i++) labels.push("R"+i);
 
-// charts
 new Chart(document.getElementById("flowChart"),{
 type:'line',
 data:{labels:labels,datasets:[{data:data.densities}]}

@@ -64,7 +64,7 @@ button {
     cursor: pointer;
 }
 
-/* TRAFFIC SIGNAL */
+/* SIGNAL UI */
 .signal-container {
     display: flex;
     justify-content: space-around;
@@ -116,7 +116,7 @@ button {
 
 <div class="sidebar">
 
-<select id="road_type" onchange="updateRoads()">
+<select id="road_type" onchange="updateUI()">
 <option value="one">One Way</option>
 <option value="two">Two Way</option>
 <option value="three">Three Way</option>
@@ -125,13 +125,7 @@ button {
 
 <div id="roads"></div>
 
-<select id="vehicle">
-<option value="none">No Emergency</option>
-<option value="road1">🚑 Road 1</option>
-<option value="road2">🔥 Road 2</option>
-<option value="road3">🚓 Road 3</option>
-<option value="road4">🚑 Road 4</option>
-</select>
+<select id="vehicle"></select>
 
 <button onclick="run()">Run System</button>
 
@@ -184,13 +178,14 @@ button {
 
 <script>
 
-// ===== GLOBAL CHART VARIABLES =====
+// ===== GLOBAL CHARTS =====
 let flowChartInstance = null;
 let co2ChartInstance = null;
 
 
-// ===== DYNAMIC INPUT =====
-function updateRoads(){
+// ===== UPDATE UI (INPUT + DROPDOWN) =====
+function updateUI(){
+
     let type = document.getElementById("road_type").value;
     let count = 1;
 
@@ -198,15 +193,24 @@ function updateRoads(){
     else if(type=="three") count=3;
     else if(type=="four") count=4;
 
-    let html="";
+    // ROADS INPUT
+    let roadHTML="";
     for(let i=1;i<=count;i++){
-        html += `<input id="r${i}" placeholder="🚗 Road ${i} Density">`;
+        roadHTML += `<input id="r${i}" placeholder="🚗 Road ${i} Density">`;
+    }
+    document.getElementById("roads").innerHTML = roadHTML;
+
+    // EMERGENCY DROPDOWN
+    let vehicleHTML = `<option value="none">No Emergency</option>`;
+
+    for(let i=1;i<=count;i++){
+        vehicleHTML += `<option value="road${i}">🚑 Road ${i}</option>`;
     }
 
-    document.getElementById("roads").innerHTML = html;
+    document.getElementById("vehicle").innerHTML = vehicleHTML;
 }
 
-updateRoads();
+updateUI();
 
 
 // ===== MAIN FUNCTION =====
@@ -228,20 +232,16 @@ body: JSON.stringify({r1,r2,r3,r4,vehicle,road_type})
 .then(res=>res.json())
 .then(data=>{
 
-// ===== SIGNAL UI =====
+// SIGNAL UI
 let html = "";
 
-for(let i=1; i<=data.count; i++){
+for(let i=1;i<=data.count;i++){
 
-    let red="", yellow="", green="";
+    let red="",yellow="",green="";
 
-    if(i==data.green){
-        green="active";
-    } else if(i==data.green-1){
-        yellow="active";
-    } else {
-        red="active";
-    }
+    if(i==data.green) green="active";
+    else if(i==data.green-1) yellow="active";
+    else red="active";
 
     html += `
     <div class="signal-road">
@@ -257,18 +257,16 @@ for(let i=1; i<=data.count; i++){
 document.getElementById("signals").innerHTML = html;
 
 
-// ===== ANALYTICS =====
+// ANALYTICS
 document.getElementById("level").innerText=data.level;
 document.getElementById("wait").innerText=data.wait+" sec";
 
-
-// ===== FUZZY =====
+// FUZZY
 document.getElementById("fuzzy").innerText =
 data.emergency ? "🚑 Emergency override activated"
 : "🧠 Signal based on highest density";
 
-
-// ===== ALERTS =====
+// ALERTS
 let alertHTML="";
 if(data.emergency)
 alertHTML+=`<div class="alert critical">Emergency Vehicle Detected</div>`;
@@ -283,50 +281,46 @@ alertHTML+=`<div class="alert info">System Running</div>`;
 document.getElementById("alerts").innerHTML=alertHTML;
 
 
-// ===== CHART LABELS =====
+// CHART LABELS
 let labels=[];
 for(let i=1;i<=data.count;i++) labels.push("R"+i);
 
 
-// ===== FLOW CHART FIX =====
-if(flowChartInstance){
-    flowChartInstance.destroy();
-}
+// FLOW CHART
+if(flowChartInstance) flowChartInstance.destroy();
 
 flowChartInstance = new Chart(document.getElementById("flowChart"),{
-    type:'line',
-    data:{
-        labels: labels,
-        datasets:[{
-            label:"Vehicle Flow",
-            data:data.densities,
-            borderColor:"lime",
-            backgroundColor:"rgba(0,255,0,0.2)",
-            fill:true
-        }]
-    }
+type:'line',
+data:{
+labels:labels,
+datasets:[{
+label:"Vehicle Flow",
+data:data.densities,
+borderColor:"lime",
+fill:true
+}]
+}
 });
 
 
-// ===== CO2 CHART FIX =====
-if(co2ChartInstance){
-    co2ChartInstance.destroy();
-}
+// CO2 CHART
+if(co2ChartInstance) co2ChartInstance.destroy();
 
 co2ChartInstance = new Chart(document.getElementById("co2Chart"),{
-    type:'bar',
-    data:{
-        labels: labels,
-        datasets:[{
-            label:"CO₂ Emission",
-            data:data.densities.map(d => d * 0.5),
-            backgroundColor:"orange"
-        }]
-    }
+type:'bar',
+data:{
+labels:labels,
+datasets:[{
+label:"CO₂ Emission",
+data:data.densities.map(d=>d*0.5),
+backgroundColor:"orange"
+}]
+}
 });
 
 });
 }
+
 </script>
 
 </body>

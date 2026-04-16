@@ -13,7 +13,6 @@ body {
     color: white;
 }
 
-/* HEADER */
 .header {
     padding: 15px;
     font-size: 24px;
@@ -21,25 +20,21 @@ body {
     text-align: center;
 }
 
-/* LAYOUT */
 .main {
     display: grid;
     grid-template-columns: 250px 1fr;
 }
 
-/* SIDEBAR */
 .sidebar {
     background: #0b132b;
     height: 100vh;
     padding: 15px;
 }
 
-/* CONTENT */
 .content {
     padding: 20px;
 }
 
-/* CARD */
 .card {
     background: linear-gradient(135deg, #1e3c72, #2a5298);
     padding: 15px;
@@ -47,14 +42,12 @@ body {
     margin-bottom: 20px;
 }
 
-/* GRID */
 .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
 
-/* INPUT */
 input, select {
     width: 90%;
     padding: 10px;
@@ -63,7 +56,6 @@ input, select {
     border: none;
 }
 
-/* BUTTON */
 button {
     padding: 10px 20px;
     background: #00c853;
@@ -72,7 +64,7 @@ button {
     cursor: pointer;
 }
 
-/* ===== NEW SIGNAL DESIGN ===== */
+/* TRAFFIC SIGNAL */
 .signal-container {
     display: flex;
     justify-content: space-around;
@@ -103,12 +95,6 @@ button {
 .yellow.active { background: gold; }
 .green.active { background: lime; }
 
-.road-label {
-    margin-bottom: 5px;
-    font-size: 14px;
-}
-
-/* ALERTS */
 .alert {
     padding: 8px;
     margin: 5px 0;
@@ -128,10 +114,7 @@ button {
 
 <div class="main">
 
-<!-- SIDEBAR -->
 <div class="sidebar">
-
-<h3>⚙️ Controls</h3>
 
 <select id="road_type" onchange="updateRoads()">
 <option value="one">One Way</option>
@@ -154,22 +137,19 @@ button {
 
 </div>
 
-<!-- CONTENT -->
 <div class="content">
 
 <div class="grid">
 
-<!-- SIGNAL -->
 <div class="card">
 <h3>🚦 Traffic Signal Status</h3>
 <div id="signals" class="signal-container"></div>
 </div>
 
-<!-- ANALYTICS -->
 <div class="card">
 <h3>📊 Traffic Analytics</h3>
 <p>🚗 Level: <span id="level"></span></p>
-<p>⏱️ Wait: <span id="wait"></span></p>
+<p>⏱ Wait: <span id="wait"></span></p>
 </div>
 
 </div>
@@ -182,7 +162,7 @@ button {
 </div>
 
 <div class="card">
-<h3>🌫️ CO₂ Emission</h3>
+<h3>🌫 CO₂ Emission</h3>
 <canvas id="co2Chart"></canvas>
 </div>
 
@@ -194,7 +174,7 @@ button {
 </div>
 
 <div class="card">
-<h3>🚨 Alerts & Notifications</h3>
+<h3>🚨 Alerts</h3>
 <div id="alerts"></div>
 </div>
 
@@ -204,7 +184,12 @@ button {
 
 <script>
 
-// dynamic inputs
+// ===== GLOBAL CHART VARIABLES =====
+let flowChartInstance = null;
+let co2ChartInstance = null;
+
+
+// ===== DYNAMIC INPUT =====
 function updateRoads(){
     let type = document.getElementById("road_type").value;
     let count = 1;
@@ -223,7 +208,8 @@ function updateRoads(){
 
 updateRoads();
 
-// main function
+
+// ===== MAIN FUNCTION =====
 function run(){
 
 let r1 = document.getElementById("r1")?.value || 0;
@@ -242,48 +228,47 @@ body: JSON.stringify({r1,r2,r3,r4,vehicle,road_type})
 .then(res=>res.json())
 .then(data=>{
 
-// ===== NEW SIGNAL UI =====
+// ===== SIGNAL UI =====
 let html = "";
 
 for(let i=1; i<=data.count; i++){
 
-    let red = "", yellow = "", green = "";
+    let red="", yellow="", green="";
 
-    if(i == data.green){
-        green = "active";
-    } 
-    else if(i == data.green - 1){
-        yellow = "active";
-    } 
-    else {
-        red = "active";
+    if(i==data.green){
+        green="active";
+    } else if(i==data.green-1){
+        yellow="active";
+    } else {
+        red="active";
     }
 
     html += `
     <div class="signal-road">
-        <div class="road-label">🚗 Road ${i}</div>
+        <div>🚗 Road ${i}</div>
         <div class="traffic-light">
             <div class="light red ${red}"></div>
             <div class="light yellow ${yellow}"></div>
             <div class="light green ${green}"></div>
         </div>
-    </div>
-    `;
+    </div>`;
 }
 
 document.getElementById("signals").innerHTML = html;
 
 
-// ANALYTICS
+// ===== ANALYTICS =====
 document.getElementById("level").innerText=data.level;
 document.getElementById("wait").innerText=data.wait+" sec";
 
-// FUZZY
+
+// ===== FUZZY =====
 document.getElementById("fuzzy").innerText =
 data.emergency ? "🚑 Emergency override activated"
-: "🧠 Signal selected based on highest density";
+: "🧠 Signal based on highest density";
 
-// ALERTS
+
+// ===== ALERTS =====
 let alertHTML="";
 if(data.emergency)
 alertHTML+=`<div class="alert critical">Emergency Vehicle Detected</div>`;
@@ -298,18 +283,46 @@ alertHTML+=`<div class="alert info">System Running</div>`;
 document.getElementById("alerts").innerHTML=alertHTML;
 
 
-// CHARTS
+// ===== CHART LABELS =====
 let labels=[];
 for(let i=1;i<=data.count;i++) labels.push("R"+i);
 
-new Chart(document.getElementById("flowChart"),{
-type:'line',
-data:{labels:labels,datasets:[{data:data.densities}]}
+
+// ===== FLOW CHART FIX =====
+if(flowChartInstance){
+    flowChartInstance.destroy();
+}
+
+flowChartInstance = new Chart(document.getElementById("flowChart"),{
+    type:'line',
+    data:{
+        labels: labels,
+        datasets:[{
+            label:"Vehicle Flow",
+            data:data.densities,
+            borderColor:"lime",
+            backgroundColor:"rgba(0,255,0,0.2)",
+            fill:true
+        }]
+    }
 });
 
-new Chart(document.getElementById("co2Chart"),{
-type:'bar',
-data:{labels:labels,datasets:[{data:data.densities}]}
+
+// ===== CO2 CHART FIX =====
+if(co2ChartInstance){
+    co2ChartInstance.destroy();
+}
+
+co2ChartInstance = new Chart(document.getElementById("co2Chart"),{
+    type:'bar',
+    data:{
+        labels: labels,
+        datasets:[{
+            label:"CO₂ Emission",
+            data:data.densities.map(d => d * 0.5),
+            backgroundColor:"orange"
+        }]
+    }
 });
 
 });
